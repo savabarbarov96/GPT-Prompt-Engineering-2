@@ -68,7 +68,7 @@ class Player(pygame.sprite.Sprite):
         self.image = player_image
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = 100, 100
-        self.vx, self.vy = 0, 0
+        self.vx, self.vy = -500, 80
         self.facing_right = True
         self.coin_count = 0
         self.combo_meter = 0
@@ -129,17 +129,80 @@ class Coin(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(load_image('coin.png'), (32, 32))
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = x, y
+        self.speed = random.uniform(1, 3)
+
+    def update(self):
+        self.rect.y += self.speed
+        if self.rect.y > SCREEN_HEIGHT:
+            self.rect.y = -self.rect.height
+            self.rect.x = random.randint(0, SCREEN_WIDTH - self.rect.width)
+
+
+class EvilCoin(Coin):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.scale = random.uniform(1, 2)
+        self.image = pygame.transform.scale(load_image('evil_coin.png'), (int(130 * self.scale), int(130 * self.scale)))
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = x, y
+        self.speed = random.uniform(1, 3)
+        self.glow_image = pygame.transform.scale(load_image('evil_coin_glow.png'), (int(130 * self.scale), int(130 * self.scale)))
+
+    def update(self):
+        self.rect.y += self.speed
+        if self.rect.y > SCREEN_HEIGHT:
+            self.rect.y = -self.rect.height
+            self.rect.x = random.randint(0, SCREEN_WIDTH - self.rect.width)
+
+def gradient_background(width, height, start_color, end_color):
+    gradient_surface = pygame.Surface((width, height))
+    for y in range(height):
+        color = [start_color[i] + (end_color[i] - start_color[i]) * y // height for i in range(3)]
+        pygame.draw.line(gradient_surface, color, (0, y), (width, y))
+    return gradient_surface
+
+def game_over_screen(screen):
+    gradient_surf = gradient_background(SCREEN_WIDTH, SCREEN_HEIGHT, (0, 0, 0), (76, 0, 153))
+    screen.blit(gradient_surf, (0, 0))
+    draw_text(screen, "GG, rubara se prezoba", SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 - 40, font_size=50, color=(255, 255, 255))
+
+    for seconds_until_restart in range(5, 0, -1):
+        screen.blit(gradient_surf, (0, 0))
+        draw_text(screen, "GG, rubara se prezoba", SCREEN_WIDTH // 3 - 60, SCREEN_HEIGHT // 3 - 40, font_size=50, color=(255, 255, 255))
+        draw_text(screen, f"Otnovo v studioto sled {seconds_until_restart} seconds...", SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, color=(255, 255, 255))
+        pygame.display.flip()
+        pygame.time.delay(1000)  # Wait for 1 second
+
+    screen.blit(gradient_surf, (0, 0))
+    draw_text(screen, "YEA BUDDY", SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 - 50, font_size=50, color=(255, 255, 255))
+    draw_text(screen, "Grebane s tesen xvat...", SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT // 2 + 20, color=(255, 255, 255))
+    pygame.display.flip()
+    pygame.time.delay(1000)  # Wait for 1 second
+
+
+
 
 def main():
     clock = pygame.time.Clock()
     running = True
+    game_over = False
     parallax_background = ParallaxBackground(background_image, BG_SCROLL_SPEED)
     player = Player()
     platforms = [Platform(0, SCREEN_HEIGHT - 32, SCREEN_WIDTH, 32)]
-    coins = [Coin(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50)) for _ in range(10)]
+    coins = [Coin(random.randint(50, SCREEN_WIDTH - 50), random.randint(-100, -32)) for _ in range(10)]
+    evil_coins = [EvilCoin(random.randint(50, SCREEN_WIDTH - 50), random.randint(-200, -32)) for _ in range(3)]
 
     while running:
         clock.tick(60)  # Set game to run at 60 FPS
+
+        if game_over:
+            game_over_screen(screen)
+            game_over = False
+            player.rect.x, player.rect.y = 100, 100
+            player.vx, player.vy = 0, 0
+            player.coin_count = 0
+            evil_coins = [EvilCoin(random.randint(50, SCREEN_WIDTH - 50), random.randint(-200, -32)) for _ in range(3)]
+            continue
 
         # Event handling
         for event in pygame.event.get():
@@ -156,11 +219,23 @@ def main():
         parallax_background.update()
         player.update(platforms)
 
+        for coin in coins:
+            coin.update()
+
+        for evil_coin in evil_coins:
+            evil_coin.update()
+
         # Check for coin collisions
         for coin in coins:
             if player.rect.colliderect(coin.rect):
                 coins.remove(coin)
                 player.coin_count += 1
+
+        # Check for evil coin collisions
+        for evil_coin in evil_coins:
+            if player.rect.colliderect(evil_coin.rect):
+                game_over = True
+                break
 
         # Draw game objects
         parallax_background.draw(screen)
@@ -169,9 +244,11 @@ def main():
             screen.blit(platform.image, platform.rect)
         for coin in coins:
             screen.blit(coin.image, coin.rect)
+        for evil_coin in evil_coins:
+            screen.blit(evil_coin.image, evil_coin.rect)
 
         # Draw the coin counter
-        draw_text(screen, f"Coins: {player.coin_count}", SCREEN_WIDTH - 100, 10)
+        draw_text(screen, f"Max Squat: {player.coin_count} kg.", SCREEN_WIDTH - 250, 10)
 
         # Update the display
         pygame.display.flip()
