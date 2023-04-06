@@ -3,6 +3,8 @@ import sys
 import os
 import random
 import pygame.font
+import pygame.mixer
+
 
 # Constants
 SCREEN_WIDTH = 800
@@ -34,14 +36,18 @@ def draw_text(surface, text, x, y, font_size=35, color=(220,20,60)):
 
 # Initialize Pygame
 pygame.init()
+pygame.mixer.init()
 
+sound = pygame.mixer.Sound("sound.mp3")
+sound.play(loops=-1)
 # Create a window
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Platformer Game")
 
 def load_image(name):
-    return pygame.image.load(os.path.join(os.path.dirname(__file__), name)).convert_alpha()
-
+    script_path = os.path.dirname(os.path.abspath(__file__))
+    image_path = os.path.join(script_path, name)
+    return pygame.image.load(image_path).convert_alpha()
 player_image = load_image('rubara.png')
 background_image = pygame.transform.scale(load_image('background.png'), (SCREEN_WIDTH * 2, SCREEN_HEIGHT))
 
@@ -165,13 +171,24 @@ def game_over_screen(screen):
     gradient_surf = gradient_background(SCREEN_WIDTH, SCREEN_HEIGHT, (0, 0, 0), (76, 0, 153))
     screen.blit(gradient_surf, (0, 0))
     draw_text(screen, "GG, rubara se prezoba", SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 - 40, font_size=50, color=(255, 255, 255))
-
+    sound.stop()  # Stop the current sound
+    pygame.mixer.fadeout(2000)  # Fade out over 2 seconds
     for seconds_until_restart in range(5, 0, -1):
         screen.blit(gradient_surf, (0, 0))
         draw_text(screen, "GG, rubara se prezoba", SCREEN_WIDTH // 3 - 60, SCREEN_HEIGHT // 3 - 40, font_size=50, color=(255, 255, 255))
         draw_text(screen, f"Otnovo v studioto sled {seconds_until_restart} seconds...", SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, color=(255, 255, 255))
         pygame.display.flip()
         pygame.time.delay(1000)  # Wait for 1 second
+
+    # Restart the sound
+    sound.play(loops=-1)
+
+    screen.blit(gradient_surf, (0, 0))
+    draw_text(screen, "YEA BUDDY", SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 - 50, font_size=50, color=(255, 255, 255))
+    draw_text(screen, "Grebane s tesen xvat...", SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT // 2 + 20, color=(255, 255, 255))
+    pygame.display.flip()
+    pygame.time.delay(1000)  # Wait for 1 second
+
 
     screen.blit(gradient_surf, (0, 0))
     draw_text(screen, "YEA BUDDY", SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 - 50, font_size=50, color=(255, 255, 255))
